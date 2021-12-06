@@ -1,0 +1,60 @@
+---
+title: "week5_lab_mark"
+author: "Oliver"
+date: "2021/12/6"
+output: html_document
+---
+
+```{r echo=TRUE}
+library(sf)
+library(tidyverse)
+library(janitor)
+library(here)
+
+```
+
+```{r wards}
+Londonboroughs<-st_read(here::here("data","ESRI","London_Borough_Excluding_MHW.shp"))
+
+Londonward<- st_read(here::here("data","ESRI","London_Ward.shp"))%>%
+  clean_names()
+
+Londonward
+
+```
+
+
+```{r accomodation data}
+OSM<-st_read(here::here("data","gis_osm_pois_free_1.shp"))%>%
+  st_transform(., 27700)
+
+Airbnb <- read_csv(here::here("data", "listings.csv"))%>%
+  st_as_sf(.,coords= c("longitude", "latitude"),
+           crs = 4326)%>%
+  st_transform(., 27700)%>%
+  clean_names()
+
+
+Worldcities <- st_read(here::here("data","World_Cities.shp"))
+
+ward_beds<- read_csv(here::here("data","ward_bedrooms.csv"))%>%
+  clean_names()
+  
+```
+
+```{r}
+beds_borough<-Londonward%>%
+  left_join(., 
+            ward_beds,
+            by=c("gss_code"="geography_code"))%>%
+  group_by(lb_gss_cd, borough)%>%
+  summarise(total_beds_per_borough = sum(bedrooms_all_categories_number_of_bedrooms_measures_value, na.rm = TRUE))
+```
+
+```{r}
+
+Airbnb_borough<-Airbnb%>%
+  filter(room_type == 'Entire home/apt')%>%
+  filter(availability_365=="365")
+```
+
