@@ -14,7 +14,9 @@ library(here)
 ```
 
 ```{r wards}
-Londonboroughs<-st_read(here::here("data","ESRI","London_Borough_Excluding_MHW.shp"))
+Londonboroughs<-st_read(here::here("data","ESRI","London_Borough_Excluding_MHW.shp"))%>%
+  st_transform(.,27700)%>%
+  clean_names()
 
 Londonward<- st_read(here::here("data","ESRI","London_Ward.shp"))%>%
   clean_names()
@@ -55,6 +57,42 @@ beds_borough<-Londonward%>%
 
 Airbnb_borough<-Airbnb%>%
   filter(room_type == 'Entire home/apt')%>%
-  filter(availability_365=="365")
+  filter(availability_365=="365")%>%
+  st_join(Londonboroughs,.)%>%
+  group_by(gss_code)%>%
+  summarise(airbnbcount = n())
+
+
+```
+
+
+```{r}
+OSM_hotels<-OSM%>%
+  filter(fclass == "hotel")%>%
+  st_join(Londonboroughs,.)%>%
+  group_by(gss_code)%>%
+  summarise(hotelbcount = n())
+
+```
+
+```{r}
+all_data_one<-Londonboroughs%>%
+  left_join(.,
+            beds_borough,by=c("gss_code" = "lb_gss_cd"))
+
+all_data_two<-all_data_one%>%
+  left_join(.,
+            Airbnb_borough,
+            by= c("gss_code" = "gss_code"))
+
+all_data_three<-all_data_two%>%
+  left_join(.,
+            OMS_hotels,
+            by= c("gss_code" = "gss_code"))
+
+mapnorm<-all_data_three%>%
+  mutate(airbnb_norm = airbnbcount/total_beds_per_borough)%>%
+  mutate(hotelnorm = hotelcount/total_beds_per_borough )
+
 ```
 
